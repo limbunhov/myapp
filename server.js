@@ -127,7 +127,7 @@ app.delete('/products/:productId', async (req, res) => {
     // Cascade deletion in other collections
     await Favorite.deleteMany({ product: productId });
     await Cart.deleteMany({ product: productId });
-    await Order.updateMany({ products: productId });
+    await Order.deleteMany({ products: productId });
 
     return res.json({ message: 'Product deleted successfully', product: deletedProduct });
   } catch (error) {
