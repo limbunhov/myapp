@@ -14,6 +14,7 @@ const productSchema = new mongoose.Schema({
     image: String,
     model: String,
     year: String,
+    type: String,
 });
 
 
