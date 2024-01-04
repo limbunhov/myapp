@@ -25,6 +25,18 @@ orderSchema.pre('save', async function (next) {
   next();
 });
 
+orderSchema.pre('remove', async function (next) {
+  try {
+    await mongoose.model('Order').updateMany(
+      { products: this._id },
+      { $pull: { products: this._id } }
+    );
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 const Order = mongoose.model('Order', orderSchema);
 
 module.exports = Order;
