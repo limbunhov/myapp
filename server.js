@@ -437,6 +437,10 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.post('/logout', (req, res) => {
+  // Handle logout logic here
+  res.status(200).send('Logout successful');
+});
 app.get('/user/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
