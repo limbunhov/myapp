@@ -21,7 +21,7 @@ app.use(cors());
 app.use(express.json());
 
 
-const mongoURI = 'mongodb+srv://limbunhov:12013456@cluster0.sedx4tq.mongodb.net/testDB?retryWrites=true&w=majority';
+const mongoURI = 'mongodb+srv://limbunhov:12013456@cluster0.sedx4tq.mongodb.net/newDB?retryWrites=true&w=majority';
 mongoose.connect(mongoURI);
 
 const db = mongoose.connection;
