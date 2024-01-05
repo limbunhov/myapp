@@ -37,7 +37,7 @@ db.once('open', () => {
 
 app.post('/products', async (req, res) => {
   // Access request body using req.body
-  const { name, title, price, image, model, year } = req.body;
+  const { name, title, price, image, model, year, type } = req.body;
   const { t1, t2, t3, t4, t5 } = title;
 
 
@@ -50,7 +50,7 @@ app.post('/products', async (req, res) => {
         t3: t3,
         t4: t4,
         t5: t5
-      }, price: price, image: image, model: model, year: year,
+      }, price: price, image: image, model: model, year: year, type: type,
     });
     await newProduct.save();
     res.json({ message: 'Product added successful!' });
