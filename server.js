@@ -513,6 +513,28 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+app.get('/verify/:verificationToken', async (req, res) => {
+  const verificationToken = req.params.verificationToken;
+
+  try {
+    const user = await User.findOne({ verificationToken });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Invalid verification token' });
+    }
+
+    // Update emailVerified to true and clear verificationToken
+    user.emailVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    res.json({ message: 'Email verified successfully' });
+  } catch (error) {
+    console.error('Error verifying email:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.get('/protected-route', verifyToken, (req, res) => {
   const user = req.user;
   res.json({ message: 'Protected route accessed', user });
