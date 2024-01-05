@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
+
 // Import Schema
 const User = require('./models/User');
 const Product = require('./models/Product');
@@ -17,20 +18,15 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(express.json());
-
-
 app.use(cors());
-
-// app.use(cors({
-//   origin: 'http://localhost:5174',
-//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//   credentials: true,
-// }));
-
-
-
-const mongoURI = 'mongodb+srv://limbunhov:12013456@cluster0.sedx4tq.mongodb.net/newDB?retryWrites=true&w=majority';
+app.use(express.json());
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Allow requests from any origin
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+const mongoURI = 'mongodb+srv://limbunhov:12013456@cluster0.sedx4tq.mongodb.net/testDB?retryWrites=true&w=majority';
 mongoose.connect(mongoURI);
 
 const db = mongoose.connection;
@@ -41,20 +37,20 @@ db.once('open', () => {
 
 app.post('/products', async (req, res) => {
   // Access request body using req.body
-  const { name, title, price, image, model, year,type } = req.body;
+  const { name, title, price, image, model, year } = req.body;
   const { t1, t2, t3, t4, t5 } = title;
 
 
   try {
     const newProduct = new Product({
       name: name,
-      title:{
-      t1: t1,
-      t2: t2,
-      t3: t3,
-      t4: t4,
-      t5: t5
-      }, price: price, image: image, model: model, year: year, type: type,
+      title: {
+        t1: t1,
+        t2: t2,
+        t3: t3,
+        t4: t4,
+        t5: t5
+      }, price: price, image: image, model: model, year: year,
     });
     await newProduct.save();
     res.json({ message: 'Product added successful!' });
@@ -132,11 +128,6 @@ app.delete('/products/:productId', async (req, res) => {
     if (!deletedProduct) {
       return res.status(404).json({ message: 'Product not found' });
     }
-
-    // Cascade deletion in other collections
-    await Favorite.deleteMany({ product: productId });
-    await Cart.deleteMany({ product: productId });
-    await Order.deleteMany({ product: productId });
 
     return res.json({ message: 'Product deleted successfully', product: deletedProduct });
   } catch (error) {
@@ -222,24 +213,24 @@ app.delete('/cart/:userId', async (req, res) => {
 // Add this API endpoint in your Express server
 app.put('/cart/:userId/:productId', async (req, res) => {
   try {
-      const productId = req.params.productId;
-      const userId = req.params.userId;
-      const { quantity } = req.body;
+    const productId = req.params.productId;
+    const userId = req.params.userId;
+    const { quantity } = req.body;
 
-      console.log('Updating quantity for product:', productId, 'in user cart:', userId);
+    console.log('Updating quantity for product:', productId, 'in user cart:', userId);
 
-      // Use findOneAndUpdate to update the quantity in the cart array
-      await Cart.findOneAndUpdate(
-          { user: userId, product: productId },
-          { $set: { quantity } },
-          { new: true }
-      );
+    // Use findOneAndUpdate to update the quantity in the cart array
+    await Cart.findOneAndUpdate(
+      { user: userId, product: productId },
+      { $set: { quantity } },
+      { new: true }
+    );
 
-      // Respond with the updated cart
-      res.status(200).json({ message: 'Quantity updated successfully!' });
+    // Respond with the updated cart
+    res.status(200).json({ message: 'Quantity updated successfully!' });
   } catch (error) {
-      console.error('Error updating quantity for product in the cart:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error updating quantity for product in the cart:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -251,8 +242,8 @@ app.delete('/cart/:userId/:productId', async (req, res) => {
     console.log('Removing product:', productId, 'from user cart:', userId);
 
     // Use findOneAndUpdate with $pull to remove the product from the cart array
-    await Cart.deleteOne({ user: userId, product: productId});
-    
+    await Cart.deleteOne({ user: userId, product: productId });
+
     // Respond with the updated cart
     res.status(200).json({ message: 'Cart cleared successfully!' });
   } catch (error) {
@@ -397,8 +388,8 @@ app.delete('/favorites/:userId/:productId', async (req, res) => {
     console.log('Removing product:', productId, 'from user favorite:', userId);
 
     // Use findOneAndUpdate with $pull to remove the product from the cart array
-    const hello = await Favorite.deleteOne({ user: userId, product: productId});
-    
+    const hello = await Favorite.deleteOne({ user: userId, product: productId });
+
     console.log(hello);
     // Respond with the updated cart
     res.status(200).json({ message: 'Cart cleared successfully!' });
@@ -413,15 +404,19 @@ app.post('/register', async (req, res) => {
   // Access request body using req.body
   const { fullName, email, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
-  // Add your registration logic here, such as saving to the database
+
   try {
     const newUser = new User({
       fullName,
       email,
       password: hashedPassword,
     });
-    await newUser.save();
-    res.json({ message: 'Registration successful!' });
+
+    // Save the new user
+    const savedUser = await newUser.save();
+
+    // Send the userId in the response
+    res.json({ message: 'Registration successful!', userId: savedUser._id });
   } catch (error) {
     console.error('Error saving user:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -451,17 +446,18 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.post('/logout', (req, res) => {
-  // Handle logout logic here
-  res.status(200).send('Logout successful');
-});
 app.get('/user/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
-    console.log(userId);
+
+    // Validate userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID format' });
+    }
+
     // Find user by userID
     const user = await User.findOne({ _id: userId });
-    console.log(user);
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -473,20 +469,19 @@ app.get('/user/:userId', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
 app.get('/role/:userId', async (req, res) => {
   const userId = req.params.userId;
 
   try {
-      const user = await User.findOne({ _id: userId });
-      if (!user) {
-          return res.status(404).json({ error: 'User not found' });
-      }
+    const user = await User.findOne({ _id: userId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-      res.json({ role: user.role });
+    res.json({ role: user.role });
   } catch (error) {
-      console.error('Error fetching user role:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error fetching user role:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -505,36 +500,21 @@ const verifyToken = (req, res, next) => {
 
   jwt.verify(token.replace('Bearer ', ''), 'secret', (err, decoded) => {
     if (err) {
+      console.error('Error verifying token:', err);
       return res.status(401).json({ error: 'Unauthorized - Invalid Token' });
     }
+
+    console.log('Decoded Token:', decoded);
 
     req.user = decoded;
     next();
   });
 };
 
-app.get('/verify/:verificationToken', async (req, res) => {
-  const verificationToken = req.params.verificationToken;
-
-  try {
-    const user = await User.findOne({ verificationToken });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Invalid verification token' });
-    }
-
-    // Update emailVerified to true and clear verificationToken
-    user.emailVerified = true;
-    user.verificationToken = undefined;
-    await user.save();
-
-    res.json({ message: 'Email verified successfully' });
-  } catch (error) {
-    console.error('Error verifying email:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+app.post('/logout', (req, res) => {
+  // Handle logout logic here
+  res.status(200).send('Logout successful');
 });
-
 app.get('/protected-route', verifyToken, (req, res) => {
   const user = req.user;
   res.json({ message: 'Protected route accessed', user });
