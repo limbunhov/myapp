@@ -129,13 +129,17 @@ app.delete('/products/:productId', async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
+    // Cascade deletion in other collections
+    await Favorite.deleteMany({ product: productId });
+    await Cart.deleteMany({ product: productId });
+    await Order.deleteMany({ product: productId });
+
     return res.json({ message: 'Product deleted successfully', product: deletedProduct });
   } catch (error) {
     console.error('Error deleting product:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
-
 
 app.post('/add-to-cart', async (req, res) => {
   const { userId, productId, quantity } = req.body;
